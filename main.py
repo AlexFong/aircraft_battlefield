@@ -564,7 +564,7 @@ def pygame_event():
                             button_sound.play()
                         else:
                             switch_shoot = True
-                        switch_mouse_left = True
+                switch_mouse_left = True
 
             elif event.button == 4:
                 if homepage:
@@ -625,7 +625,7 @@ def pygame_event():
                         else:
                             switch_shoot = False
                         pause_button_active = False
-                        switch_mouse_left = False
+                switch_mouse_left = False
 
         # KEYUP
         if event.type == KEYUP:
@@ -827,7 +827,6 @@ while True:    # 游戏界面
             if loop == loop_shoot_ready:
                 shoot_ready = True
                 loop_shoot_ready = False
-            print(switch_shoot,me.active,shoot_ready)
             if switch_shoot and me.active and shoot_ready:
                 if me.shoot():    # 耗蓝方法
                     bullet_sound.play()
