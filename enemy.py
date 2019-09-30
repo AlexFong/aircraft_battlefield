@@ -104,6 +104,7 @@ class Enemy_1(pygame.sprite.Sprite):    # 继承
                                  (int(self.raw_rect.width*self.ratio),int(self.raw_rect.height*self.ratio)))
                     self.image = pygame.transform.rotate(self.image,self.degree)
                 self.die_timer += 1
+                
                 if self.die_timer == 1:
                     return 2
                 else:

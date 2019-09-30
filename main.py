@@ -18,7 +18,7 @@ from button import *
 pygame.init()
 pygame.mixer.init()
 clock = pygame.time.Clock()
-
+score = 0
 
 # 参数定义6666666666666666666666666
 screen_size_default = width,height = 1600,900#1600,900
@@ -938,17 +938,6 @@ while True:    # 游戏界面
                     return_button.color = return_button.color2
                 else:
                     return_button.color = return_button.color1
-                return_button.draw(screen)
-
-
-
-
-
-
-
-
-
-
                 return_button.draw(screen2)
             else:    # 暂停界面
                 
@@ -974,38 +963,6 @@ while True:    # 游戏界面
                 else:
                     gamepage_pause_exit_button.color = gamepage_pause_exit_button.color1
                 gamepage_pause_exit_button.draw(screen)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
         else:    # 游戏主循环界面
@@ -1151,6 +1108,7 @@ while True:    # 游戏界面
                 temp = each.check_die()
                 if temp == 2:
                     enemy1_down_sound.play()
+                    score += 100
                 elif temp:
                     enemy_1_group.remove(each)
                     continue
@@ -1265,6 +1223,17 @@ while True:    # 游戏界面
                 pause_button = pause_nor
             screen.blit(pause_button,(screen_size[0]-65-20,30))
 
+            """fps_text = font_msyh(int(12*ratio)).render("fps: " + str(int(clock.get_fps())),True,(0,0,0))
+            #fps_text_rect = fps_text.get_rect()
+            screen.blit(fps_text,(int(10*ratio),int(10*ratio)))"""
+
+            """temp = str(score)
+            while temp:
+                temp.pop(0:2)"""
+
+            fps_text = font_msyh(int(24*ratio)).render(("击杀得分: %s" % score),True,(0,0,0))
+            #fps_text_rect = fps_text.get_rect()
+            screen.blit(fps_text,(int(20*ratio),int(20*ratio)))
     
     
     
