@@ -43,7 +43,6 @@ setting_drawer_group = pygame.sprite.Group()
 setting_drawer_group.add(screen_size_setting)
 
 screen_mode_default = "窗口化"    #初始化全屏设置
-#screen_mode_dict = {"窗口化":None,"全屏":"FULLSCREEN"}
 screen_mode_key_list = ["窗口化","全屏"]
 screen_mode_value_list = [None,"FULLSCREEN"]
 screen_mode = Setting_choice(ratio,key=screen_mode_default,\
@@ -128,20 +127,32 @@ me = Myplane(ratio,screen_size)
 
 
 ## UI对象
-start_button = Button(ratio,\
-        center=(screen_size[0]*0.5,screen_size[1]*0.3),size=(500,100),text=" 飞机大战!")
-setting_button = Button(ratio,\
-        center=(screen_size[0]*0.5,screen_size[1]*0.45),size=(500,100),text=" 设置")
-ranking_button = Button(ratio,\
-        center=(screen_size[0]*0.5,screen_size[1]*0.6),size=(500,100),text=" 排行榜")
-exit_button = Button(ratio,\
-        center=(screen_size[0]*0.5,screen_size[1]*0.75),size=(500,100),text=" 退出游戏")
+# 其实size的数值可以用screen_size来定义
+start_button = Button(ratio,center=(screen_size_default[0]*0.5,screen_size_default[1]*0.3),\
+    size=(500,100),text=" 飞机大战!")
+setting_button = Button(ratio,center=(screen_size_default[0]*0.5,screen_size_default[1]*0.45),\
+    size=(500,100),text="设置")
+ranking_button = Button(ratio,center=(screen_size_default[0]*0.5,screen_size_default[1]*0.6),\
+    size=(500,100),text="排行榜")
+exit_button = Button(ratio,center=(screen_size_default[0]*0.5,screen_size_default[1]*0.75),\
+    size=(500,100),text="退出游戏")
+
+return_button = Button(ratio,center=(screen_size[0]*0.5 + 360,screen_size[1]*0.9),\
+    size=(80,30),text="Esc返回",text_size=18)
+
+gamepage_pause_setting_button = Button(ratio,center=(screen_size_default[0]*0.5,screen_size_default[1]*0.5),\
+    size=(500,100),text="设置")
+gamepage_pause_exit_button = Button(ratio,center=(screen_size_default[0]*0.5,screen_size_default[1]*0.65),\
+    size=(500,100),text="返回主界面")
 
 button_group = pygame.sprite.Group()
 button_group.add(start_button)
 button_group.add(setting_button)
 button_group.add(ranking_button)
 button_group.add(exit_button)
+button_group.add(return_button)
+button_group.add(gamepage_pause_setting_button)
+button_group.add(gamepage_pause_exit_button)
 
 
 # 音量设置
@@ -245,11 +256,10 @@ def set_image_alpha(each,screen,alpha_num):
 def pause():
     global gamepage_paused,gamepage
     gamepage_paused = not gamepage_paused
-    #gamepage = not gamepage
-    if gamepage_paused:
+    """if gamepage_paused:
         pygame.mixer.music.pause()
     else:
-        pygame.mixer.music.unpause()
+        pygame.mixer.music.unpause()"""
 
         
 
@@ -535,6 +545,13 @@ def pygame_event():
                                     screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
                                 else:
                                     screen = pygame.display.set_mode(screen_size,HWSURFACE)
+                            elif return_button.on_button(mouse_pos):
+                                button_sound.play()
+                                return_button.active = True
+                    elif homepage_ranking:
+                        if return_button.on_button(mouse_pos):
+                            button_sound.play()
+                            return_button.active = True
                     else:
                         if start_button.on_button(mouse_pos):
                             start_button.active = True
@@ -551,11 +568,70 @@ def pygame_event():
 
                 elif gamepage and me.active:
                     if gamepage_paused:
-                        if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
-                                mouse_pos[1] in range(30,70):
-                            pause_button_active = True
-                            button_sound.play()
-                    
+                        if gamepage_paused_setting:
+                            if screen_size_setting.active:
+                                if screen_size_setting.on_bar(mouse_pos):
+                                    screen_size_setting.change_bar(mouse_pos)
+                                elif screen_size_setting.on_list(mouse_pos):
+                                    button_sound.play()
+                                    print("screen_size_setting.on_list")
+                                    screen_size_setting.value = screen_size_setting.list[screen_size_setting.on_list(mouse_pos)-1]
+                                    # 因为0等价False，所以移了一位
+                                    change_screen_size = screen_size_setting.value
+                                    ratio = change_screen_size[1]/screen_size_default[1]
+                                    screen_change(ratio,screen_size,change_screen_size)    # 用于设配各对象
+                                    screen_size = change_screen_size
+                                    if screen_mode.value:
+                                        screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
+                                    else:
+                                        screen = pygame.display.set_mode(screen_size,HWSURFACE)
+                                    screen_size_setting.active = False
+                                else:
+                                    screen_size_setting.active = False
+                            else:
+                                if total_volume.on_button(mouse_pos):
+                                    total_volume.active = True
+                                    button_sound.play()
+                                elif effect_volume.on_button(mouse_pos):
+                                    effect_volume.active = True
+                                    button_sound.play()
+                                elif bgm_volume.on_button(mouse_pos):
+                                    bgm_volume.active = True
+                                    button_sound.play()
+                                elif screen_size_setting.on_button(mouse_pos):
+                                    button_sound.play()
+                                    screen_size_setting.active = not screen_size_setting.active
+                                elif screen_mode.on_button_left(mouse_pos):
+                                    button_sound.play()
+                                    screen_mode.change(-1)
+                                    if screen_mode.value:
+                                        screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
+                                    else:
+                                        screen = pygame.display.set_mode(screen_size,HWSURFACE)
+                                elif screen_mode.on_button_right(mouse_pos):
+                                    button_sound.play()
+                                    screen_mode.change(+1)
+                                    if screen_mode.value:
+                                        screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
+                                    else:
+                                        screen = pygame.display.set_mode(screen_size,HWSURFACE)
+                                elif return_button.on_button(mouse_pos):
+                                    button_sound.play()
+                                    return_button.active = True
+
+
+                        else:    # 暂停界面
+                            if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
+                                    mouse_pos[1] in range(30,70):
+                                pause_button_active = True
+                                button_sound.play()
+                            elif gamepage_pause_setting_button.on_button(mouse_pos):
+                                gamepage_pause_setting_button.active = True
+                                button_sound.play()
+                            elif gamepage_pause_exit_button.on_button(mouse_pos):
+                                gamepage_pause_exit_button.active = True
+                                button_sound.play()
+
                     # 暂停按键判断
                     else:
                         if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
@@ -574,6 +650,14 @@ def pygame_event():
                                 screen_size_setting.on_list(mouse_pos):
                                 if screen_size_setting.list_head_index > 0:
                                     screen_size_setting.list_head_index -= 1
+                if gamepage:
+                    if gamepage_paused:
+                        if gamepage_paused_setting:
+                            if screen_size_setting.active:
+                                if screen_size_setting.on_bar(mouse_pos) or \
+                                    screen_size_setting.on_list(mouse_pos):
+                                    if screen_size_setting.list_head_index > 0:
+                                        screen_size_setting.list_head_index -= 1
             elif event.button == 5:
                 if homepage:
                     if homepage_setting:
@@ -583,14 +667,30 @@ def pygame_event():
                                 if screen_size_setting.list_head_index + \
                                     screen_size_setting.list_num < len(screen_size_setting.list):
                                     screen_size_setting.list_head_index += 1
-                    
+                if gamepage:
+                    if gamepage_paused:
+                        if gamepage_paused_setting:
+                            if screen_size_setting.active:
+                                if screen_size_setting.on_bar(mouse_pos) or \
+                                    screen_size_setting.on_list(mouse_pos):
+                                    if screen_size_setting.list_head_index + \
+                                        screen_size_setting.list_num < len(screen_size_setting.list):
+                                        screen_size_setting.list_head_index += 1
         if event.type == MOUSEBUTTONUP:
             if event.button == 1:
                 if homepage:
                     if homepage_setting:
+                        if return_button.on_button(mouse_pos) and return_button.active:
+                            homepage_setting = False
+                            gamepage_paused_setting = False
+                        return_button.active = False
                         total_volume.active = False
                         effect_volume.active = False
                         bgm_volume.active = False
+                    elif homepage_ranking:
+                        if return_button.on_button(mouse_pos) and return_button.active:
+                            homepage_ranking = False
+                        return_button.active = False
                     else:
                         if start_button.on_button(mouse_pos) and start_button.active:
                             homepage = False
@@ -612,12 +712,29 @@ def pygame_event():
                 elif gamepage and me.active:
                     if gamepage_paused:
                         # 松键判断
-                        if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
-                                mouse_pos[1] in range(30,70) and pause_button_active:
-                                # pause_button_active妙，不会引起在这松手继续射击的bug
-                            pause()
+                        if gamepage_paused_setting:
+                            if return_button.on_button(mouse_pos) and return_button.active:
+                                homepage_setting = False
+                                gamepage_paused_setting = False
+                            return_button.active = False
+                            total_volume.active = False
+                            effect_volume.active = False
+                            bgm_volume.active = False
+                        else:
+                            if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
+                                    mouse_pos[1] in range(30,70) and pause_button_active:
+                                    # pause_button_active妙，不会引起在这松手继续射击的bug
+                                pause()
+                            elif gamepage_pause_setting_button.on_button(mouse_pos) and gamepage_pause_setting_button.active:
+                                gamepage_paused_setting = True
+                            elif gamepage_pause_exit_button.on_button(mouse_pos) and gamepage_pause_exit_button.active:
+                                gamepage_paused = False
+                                gamepage = False
+                                homepage = True
+                                # 退出机制应补充
+                            gamepage_pause_setting_button.active = False
+                            gamepage_pause_exit_button.active = False
                     else:
-                        # 松键判断
                         if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
                                 mouse_pos[1] in range(30,70) and pause_button_active:
                                 # pause_button_active妙，不会引起在这松手继续射击的bug
@@ -640,10 +757,32 @@ def pygame_event():
 
         # KEYDOWN
         if event.type == KEYDOWN:    # 这种方法一次只能捕获一个按键???怎么突然又可以多键了。。。
-            if gamepage:
-                if event.key == K_ESCAPE:
-                    pause()
-                    button_sound.play()
+            if event.key == K_ESCAPE:
+                if gamepage:
+                    if gamepage_paused:
+                        if gamepage_paused_setting:
+                            button_sound.play()
+                            gamepage_paused_setting = False
+                        else:
+                            pause()
+                            button_sound.play()
+                    else:
+                        pause()
+                        button_sound.play()
+                elif homepage:
+                    if homepage_setting:
+                        button_sound.play()
+                        homepage_setting = False
+                        return_button.active = False
+                        total_volume.active = False
+                        effect_volume.active = False
+                        bgm_volume.active = False
+                        screen_size_setting.active = False
+                    elif homepage_ranking:
+                        button_sound.play()
+                        homepage_ranking = False
+                        return_button.active = False
+
             if event.key == K_UP or event.key == K_w:
                 switch_up = True
             if event.key == K_DOWN or event.key == K_s:
@@ -663,10 +802,9 @@ def pygame_event():
                 else:
                     screen = pygame.display.set_mode(screen_size,HWSURFACE)
                 
-            if event.key == K_F11:
-                fullscreen = not fullscreen
-                if fullscreen:
-                    #temp_screen_size = screen_size
+            """if event.key == K_F11:
+                screen_mode.change(1)
+                if screen_mode.value == "FULLSCREEN":
                     change_screen_size = fullscreen_size
                     ratio = change_screen_size[1]/screen_size_default[1]
                     screen_change(ratio,screen_size,change_screen_size)    # 用于设配各对象
@@ -683,11 +821,11 @@ def pygame_event():
                     if screen_mode.value:
                         screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
                     else:
-                        screen = pygame.display.set_mode(screen_size,HWSURFACE)
+                        screen = pygame.display.set_mode(screen_size,HWSURFACE)"""
         
 
 
-################################主循环#################################
+################################主循环######################################################################
 
 
 while True:    # 游戏界面
@@ -727,9 +865,19 @@ while True:    # 游戏界面
             total_volume.draw(screen2)
             effect_volume.draw(screen2)
             bgm_volume.draw(screen2)
+            
+            if return_button.active and return_button.on_button(mouse_pos):
+                return_button.color = return_button.color2
+            else:
+                return_button.color = return_button.color1
+            return_button.draw(screen)
 
         elif homepage_ranking:
-            pass
+            if return_button.active and return_button.on_button(mouse_pos):
+                return_button.color = return_button.color2
+            else:
+                return_button.color = return_button.color1
+            return_button.draw(screen)
         else:
             if start_button.active and switch_mouse_left:
                 start_button.color = start_button.color2
@@ -760,21 +908,108 @@ while True:    # 游戏界面
         pass
     
     elif gamepage:
-        screen.fill((255,255,255))
 
         if gamepage_paused:    # 暂停界面
+            screen.blit(bg,(0,0))
             if gamepage_paused_setting:    # 暂停设置界面
-                pass
+                screen_mode.draw(screen2)
+                screen_size_setting.draw_top(screen2)
+                if screen_size_setting.active:
+                    screen_size_setting.draw_list(screen2)
+
+                # 音量设置
+                if total_volume.active:
+                    total_volume.change(mouse_pos)
+                    pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
+                    set_effect_volume()
+                elif effect_volume.active:
+                    effect_volume.change(mouse_pos)
+                    pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
+                    set_effect_volume()
+                elif bgm_volume.active:
+                    bgm_volume.change(mouse_pos)
+                    pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
+                    
+                total_volume.draw(screen2)
+                effect_volume.draw(screen2)
+                bgm_volume.draw(screen2)
+                
+                if return_button.active and return_button.on_button(mouse_pos):
+                    return_button.color = return_button.color2
+                else:
+                    return_button.color = return_button.color1
+                return_button.draw(screen)
+
+
+
+
+
+
+
+
+
+
+                return_button.draw(screen2)
             else:    # 暂停界面
+                
                 if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
                                 mouse_pos[1] in range(30,70) and switch_mouse_left:
                     pause_button = resume_pressed
                 else:
                     pause_button = resume_nor 
                 screen.blit(pause_button,(screen_size[0]-65-20,30))    # 暂停按钮
+                # 可以保存起来重复调用
+                pause_text = font_msyh(int(72*ratio)).render("游戏暂停",True,(255,255,255))
+                pause_text_rect = pause_text.get_rect()
+                screen.blit(pause_text,(screen_size[0]*0.5-pause_text_rect[2]/2,screen_size[1]*0.2))
+
+                if gamepage_pause_setting_button.active and switch_mouse_left:
+                    gamepage_pause_setting_button.color = gamepage_pause_setting_button.color2
+                else:
+                    gamepage_pause_setting_button.color = gamepage_pause_setting_button.color1
+                gamepage_pause_setting_button.draw(screen)
+
+                if gamepage_pause_exit_button.active and switch_mouse_left:
+                    gamepage_pause_exit_button.color = gamepage_pause_exit_button.color2
+                else:
+                    gamepage_pause_exit_button.color = gamepage_pause_exit_button.color1
+                gamepage_pause_exit_button.draw(screen)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         else:    # 游戏主循环界面
-            
+            screen.fill((255,255,255))
             # loop in Interval(1,60)
             loop += 1
             if loop == frequancy + 1:
