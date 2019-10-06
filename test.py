@@ -2,5 +2,6 @@ import pygame
 
 pygame.init()
 
-a = pygame.display.list_modes()
-print(a)
+a = "abc"
+b = a
+print(b[:1],len(b))

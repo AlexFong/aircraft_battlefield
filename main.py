@@ -7,6 +7,7 @@ import math
 from pygame.locals import *
 from interval import Interval
 from random import *
+import timeit
 
 from myplane import *
 from edge import *
@@ -18,7 +19,6 @@ from button import *
 pygame.init()
 pygame.mixer.init()
 clock = pygame.time.Clock()
-score = 0
 
 # 参数定义6666666666666666666666666
 screen_size_default = width,height = 1600,900#1600,900
@@ -53,9 +53,8 @@ screen_mode = Setting_choice(ratio,key=screen_mode_default,\
 setting_choice_group = pygame.sprite.Group()
 setting_choice_group.add(screen_mode)
 
-
 frequancy = 60
-loop = 0
+
 
 # 界面开关
 homepage = True
@@ -91,8 +90,7 @@ loop_shoot_ready = False
 loop_gen_bullet1 = False
 loop_gen_bullet2 = False
 bullet_sound_delay = 6
-
-clock = pygame.time.Clock()
+initial = False
 
 
 # 日志
@@ -108,22 +106,6 @@ resume_pressed = pygame.image.load("images/resume_pressed.png").convert_alpha()
 pause_nor = pygame.image.load("images/pause_nor.png").convert_alpha()
 pause_pressed = pygame.image.load("images/pause_pressed.png").convert_alpha()
 pause_button = pause_nor
-
-
-
-## 文字
-def font_fs(size):
-    return pygame.font.Font("font/BrushScriptStd.ttf",size)    # 仿宋的感觉
-def font_kt(size):
-    return pygame.font.Font("font/font.ttf",size)    # 卡通
-def font_msyh(size):
-    return pygame.font.Font("font/msyh.ttf",size)    # 微软雅黑 
-
-
-
-
-# 创建类对象5555555555555555
-me = Myplane(ratio,screen_size)
 
 
 ## UI对象
@@ -155,6 +137,15 @@ button_group.add(gamepage_pause_setting_button)
 button_group.add(gamepage_pause_exit_button)
 
 
+## 文字
+def font_fs(size):
+    return pygame.font.Font("font/BrushScriptStd.ttf",size)    # 仿宋的感觉
+def font_kt(size):
+    return pygame.font.Font("font/font.ttf",size)    # 卡通
+def font_msyh(size):
+    return pygame.font.Font("font/msyh.ttf",size)    # 微软雅黑 
+
+
 # 音量设置
 total_volume_default = 0.5
 effect_volume_default = 0.2
@@ -170,12 +161,6 @@ setting_touch_bar_group = pygame.sprite.Group()
 setting_touch_bar_group.add(total_volume)
 setting_touch_bar_group.add(effect_volume)
 setting_touch_bar_group.add(bgm_volume)
-
-
-## bgm
-pygame.mixer.music.load("sound/game_music.ogg")
-pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)    #0-1
-pygame.mixer.music.play()
 
 
 ## 音效
@@ -205,6 +190,39 @@ enemy3_flying_sound.set_volume(total_volume.value*effect_volume.value)
 use_bomb_sound = pygame.mixer.Sound("sound/use_bomb.wav")
 use_bomb_sound.set_volume(total_volume.value*effect_volume.value)
 
+## bgm
+pygame.mixer.music.load("sound/game_music.ogg")
+pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)    #0-1
+pygame.mixer.music.play()
+
+edge_group = pygame.sprite.Group()
+edge_group.add(Edge("left",0-100,0-100,100,screen_size[1]+200))
+edge_group.add(Edge("top",0-100,0-100,screen_size[0]+200,100))
+edge_group.add(Edge("right",screen_size[0],0-100,100,screen_size[1]+200))
+edge_group.add(Edge("bottom",0-100,screen_size[1],screen_size[0]+200,100))
+
+
+def initialize():
+    global score,loop,timer,me,weiqi_group,myplane_bullet_group,enemy_1_num,enemy_1_group,bonus_group
+
+    score = 0
+    loop = 0
+    timer = 0
+
+    # 创建类对象5555555555555555
+    me = Myplane(ratio,screen_size)
+
+    ## 创建精灵组
+    weiqi_group = pygame.sprite.Group()
+
+    myplane_bullet_group = pygame.sprite.Group()
+
+    enemy_1_num = 10    # 会有其他进程控制这个数量
+    enemy_1_group = pygame.sprite.Group()
+
+    bonus_group = pygame.sprite.Group()
+
+
 def set_effect_volume():
     bullet_sound.set_volume(total_volume.value*effect_volume.value)
     button_sound.set_volume(total_volume.value*effect_volume.value)
@@ -219,24 +237,6 @@ def set_effect_volume():
     enemy3_down_sound.set_volume(total_volume.value*effect_volume.value)
     enemy3_flying_sound.set_volume(total_volume.value*effect_volume.value)
     use_bomb_sound.set_volume(total_volume.value*effect_volume.value)
-
-
-
-## 创建精灵组
-weiqi_group = pygame.sprite.Group()
-
-myplane_bullet_group = pygame.sprite.Group()
-
-enemy_1_num = 10    # 会有其他进程控制这个数量
-enemy_1_group = pygame.sprite.Group()
-
-bonus_group = pygame.sprite.Group()
-
-edge_group = pygame.sprite.Group()
-edge_group.add(Edge("left",0-100,0-100,100,screen_size[1]+200))
-edge_group.add(Edge("top",0-100,0-100,screen_size[0]+200,100))
-edge_group.add(Edge("right",screen_size[0],0-100,100,screen_size[1]+200))
-edge_group.add(Edge("bottom",0-100,screen_size[1],screen_size[0]+200,100))
 
 
 #方法定义#################################################
@@ -261,7 +261,6 @@ def pause():
     else:
         pygame.mixer.music.unpause()"""
 
-        
 
 # 获取鼠标与飞机的夹角
 def get_me_degree():
@@ -484,9 +483,7 @@ def pygame_event():
             pause_button_active,\
             gamepage,gamepage_paused,gamepage_paused_setting,\
             homepage,homepage_ranking,homepage_setting,\
-            diepage,ratio
-            
-            
+            diepage,ratio,initial
     
     for event in pygame.event.get():
         # 全场景通用的
@@ -693,6 +690,7 @@ def pygame_event():
                         return_button.active = False
                     else:
                         if start_button.on_button(mouse_pos) and start_button.active:
+                            initial = True
                             homepage = False
                             gamepage = True
                         elif setting_button.on_button(mouse_pos) and setting_button.active:
@@ -731,6 +729,7 @@ def pygame_event():
                                 gamepage_paused = False
                                 gamepage = False
                                 homepage = True
+                                pygame.mixer.music.play()
                                 # 退出机制应补充
                             gamepage_pause_setting_button.active = False
                             gamepage_pause_exit_button.active = False
@@ -801,49 +800,82 @@ def pygame_event():
                     screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
                 else:
                     screen = pygame.display.set_mode(screen_size,HWSURFACE)
-                
-            """if event.key == K_F11:
-                screen_mode.change(1)
-                if screen_mode.value == "FULLSCREEN":
-                    change_screen_size = fullscreen_size
-                    ratio = change_screen_size[1]/screen_size_default[1]
-                    screen_change(ratio,screen_size,change_screen_size)    # 用于设配各对象
-                    screen_size = change_screen_size
-                    if screen_mode.value:
-                        screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
-                    else:
-                        screen = pygame.display.set_mode(screen_size,HWSURFACE)
-                else:
-                    change_screen_size = temp_screen_size
-                    ratio = change_screen_size[1]/screen_size_default[1]
-                    screen_change(ratio,screen_size,change_screen_size)    # 用于设配各对象
-                    screen_size = change_screen_size
-                    if screen_mode.value:
-                        screen = pygame.display.set_mode(screen_size,HWSURFACE | FULLSCREEN)
-                    else:
-                        screen = pygame.display.set_mode(screen_size,HWSURFACE)"""
+
+
+def homepage_event():
+    screen.blit(bg,(0,0))
+
+    if homepage_setting:
+        # 分辨率设置的功能
+        screen_mode.draw(screen2)
+        screen_size_setting.draw_top(screen2)
+        if screen_size_setting.active:
+            screen_size_setting.draw_list(screen2)
+
+        # 音量设置
+        if total_volume.active:
+            total_volume.change(mouse_pos)
+            pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
+            set_effect_volume()
+        elif effect_volume.active:
+            effect_volume.change(mouse_pos)
+            pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
+            set_effect_volume()
+        elif bgm_volume.active:
+            bgm_volume.change(mouse_pos)
+            pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
+            
+        total_volume.draw(screen2)
+        effect_volume.draw(screen2)
+        bgm_volume.draw(screen2)
         
+        if return_button.active and return_button.on_button(mouse_pos):
+            return_button.color = return_button.color2
+        else:
+            return_button.color = return_button.color1
+        return_button.draw(screen)
+
+    elif homepage_ranking:
+        if return_button.active and return_button.on_button(mouse_pos):
+            return_button.color = return_button.color2
+        else:
+            return_button.color = return_button.color1
+        return_button.draw(screen)
+    else:
+        if start_button.active and switch_mouse_left:
+            start_button.color = start_button.color2
+        else:
+            start_button.color = start_button.color1
+        start_button.draw(screen)
+
+        if setting_button.active and switch_mouse_left:
+            setting_button.color = setting_button.color2
+        else:
+            setting_button.color = setting_button.color1
+        setting_button.draw(screen)
+
+        if ranking_button.active and switch_mouse_left:
+            ranking_button.color = ranking_button.color2
+        else:
+            ranking_button.color = ranking_button.color1
+        ranking_button.draw(screen)
+
+        if exit_button.active and switch_mouse_left:
+            exit_button.color = exit_button.color2
+        else:
+            exit_button.color = exit_button.color1
+        exit_button.draw(screen)
 
 
-################################主循环######################################################################
+def diepage_event():
+    pass
 
 
-while True:    # 游戏界面
-    # 画布区
-    #screen.blit(bg,(0,0))
-    #screen.fill((255,255,255))
-    screen2.fill((255,255,255,0))#alpha=0,全透明
-
-    pygame_event()
-    
-    if not pygame.mixer.music.get_busy():
-        pygame.mixer.music.play()
-    
-    if homepage:    #游戏主界面
+def gamepage_event():
+    global loop,me,loop_shoot_ready,loop_gen_bullet1,loop_gen_bullet2,score,shoot_ready,timer
+    if gamepage_paused:    # 暂停界面
         screen.blit(bg,(0,0))
-
-        if homepage_setting:
-            # 分辨率设置的功能
+        if gamepage_paused_setting:    # 暂停设置界面
             screen_mode.draw(screen2)
             screen_size_setting.draw_top(screen2)
             if screen_size_setting.active:
@@ -870,339 +902,262 @@ while True:    # 游戏界面
                 return_button.color = return_button.color2
             else:
                 return_button.color = return_button.color1
-            return_button.draw(screen)
-
-        elif homepage_ranking:
-            if return_button.active and return_button.on_button(mouse_pos):
-                return_button.color = return_button.color2
-            else:
-                return_button.color = return_button.color1
-            return_button.draw(screen)
-        else:
-            if start_button.active and switch_mouse_left:
-                start_button.color = start_button.color2
-            else:
-                start_button.color = start_button.color1
-            start_button.draw(screen)
-
-            if setting_button.active and switch_mouse_left:
-                setting_button.color = setting_button.color2
-            else:
-                setting_button.color = setting_button.color1
-            setting_button.draw(screen)
-
-            if ranking_button.active and switch_mouse_left:
-                ranking_button.color = ranking_button.color2
-            else:
-                ranking_button.color = ranking_button.color1
-            ranking_button.draw(screen)
-
-            if exit_button.active and switch_mouse_left:
-                exit_button.color = exit_button.color2
-            else:
-                exit_button.color = exit_button.color1
-            exit_button.draw(screen)
-
-
-    elif diepage:
-        pass
-    
-    elif gamepage:
-
-        if gamepage_paused:    # 暂停界面
-            screen.blit(bg,(0,0))
-            if gamepage_paused_setting:    # 暂停设置界面
-                screen_mode.draw(screen2)
-                screen_size_setting.draw_top(screen2)
-                if screen_size_setting.active:
-                    screen_size_setting.draw_list(screen2)
-
-                # 音量设置
-                if total_volume.active:
-                    total_volume.change(mouse_pos)
-                    pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
-                    set_effect_volume()
-                elif effect_volume.active:
-                    effect_volume.change(mouse_pos)
-                    pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
-                    set_effect_volume()
-                elif bgm_volume.active:
-                    bgm_volume.change(mouse_pos)
-                    pygame.mixer.music.set_volume(total_volume.value*bgm_volume.value)
-                    
-                total_volume.draw(screen2)
-                effect_volume.draw(screen2)
-                bgm_volume.draw(screen2)
-                
-                if return_button.active and return_button.on_button(mouse_pos):
-                    return_button.color = return_button.color2
-                else:
-                    return_button.color = return_button.color1
-                return_button.draw(screen2)
-            else:    # 暂停界面
-                
-                if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
-                                mouse_pos[1] in range(30,70) and switch_mouse_left:
-                    pause_button = resume_pressed
-                else:
-                    pause_button = resume_nor 
-                screen.blit(pause_button,(screen_size[0]-65-20,30))    # 暂停按钮
-                # 可以保存起来重复调用
-                pause_text = font_msyh(int(72*ratio)).render("游戏暂停",True,(255,255,255))
-                pause_text_rect = pause_text.get_rect()
-                screen.blit(pause_text,(screen_size[0]*0.5-pause_text_rect[2]/2,screen_size[1]*0.2))
-
-                if gamepage_pause_setting_button.active and switch_mouse_left:
-                    gamepage_pause_setting_button.color = gamepage_pause_setting_button.color2
-                else:
-                    gamepage_pause_setting_button.color = gamepage_pause_setting_button.color1
-                gamepage_pause_setting_button.draw(screen)
-
-                if gamepage_pause_exit_button.active and switch_mouse_left:
-                    gamepage_pause_exit_button.color = gamepage_pause_exit_button.color2
-                else:
-                    gamepage_pause_exit_button.color = gamepage_pause_exit_button.color1
-                gamepage_pause_exit_button.draw(screen)
-
-
-        else:    # 游戏主循环界面
-            screen.fill((255,255,255))
-            # loop in Interval(1,60)
-            loop += 1
-            if loop == frequancy + 1:
-                loop = 1
-
+            return_button.draw(screen2)
+        else:    # 暂停界面
             
-            # 处理移动事件#####################################################
-
-            # me的部分
-            me.slowdown()
-
-            if switch_up:
-                me.move_up()
-            if switch_down:
-                me.move_down()
-            if switch_left:
-                me.move_left()
-            if switch_right:
-                me.move_right()
-
-            me_image_frequency = 5
-            if loop%me_image_frequency == 0 and loop/me_image_frequency%2 == 0:
-                me.chosen_image = me.transform_image2
-            elif loop%me_image_frequency == 0 and loop/me_image_frequency%2 == 1:
-                me.chosen_image = me.transform_image1
-
-            get_me_degree()
-            me.rotate()
-            me.move()
-
-
-            edge_collide_result = pygame.sprite.spritecollide(me,\
-                                edge_group,False,pygame.sprite.collide_mask)
-            if edge_collide_result:
-                for each in edge_collide_result:    # 此处是碰撞的边界的集合
-                    me.edge_collide(each.direction)
-
-            if me.hurting == True:
-                if me.hurting_timer < me.hurting_frame:
-                    me.hurting_timer += 1
-                elif me.hurting_timer >= me.hurting_frame:
-                    me.hurting = False
-                    me.hurting_timer = 0
-
-            if loop == frequancy:
-                me.get_sp()
-
-
-            # 生成me的bullet,声音不跟手，先播声音，后生成子弹
-            if loop == loop_shoot_ready:
-                shoot_ready = True
-                loop_shoot_ready = False
-            if switch_shoot and me.active and shoot_ready:
-                if me.shoot():    # 耗蓝方法
-                    bullet_sound.play()
-                    # 1个loop_gen_bullet只能延迟1个bullet_frequency，所以此处用了两个
-                    if not loop_gen_bullet1 and not loop_gen_bullet2:
-                        loop_gen_bullet1 = loop + bullet_sound_delay    # 用这个参数处理延迟手感
-                        if loop_gen_bullet1 > frequancy:
-                            loop_gen_bullet1 = loop_gen_bullet1 - frequancy
-                    elif loop_gen_bullet1 and not loop_gen_bullet2:
-                        loop_gen_bullet2 = loop + bullet_sound_delay
-                        if loop_gen_bullet2 > frequancy:
-                            loop_gen_bullet2 = loop_gen_bullet2 - frequancy
-                    elif not loop_gen_bullet1 and loop_gen_bullet2:
-                        loop_gen_bullet1 = loop + bullet_sound_delay
-                        if loop_gen_bullet1 > frequancy:
-                            loop_gen_bullet1 = loop_gen_bullet1 - frequancy
-
-                    loop_shoot_ready = loop + me.gun_type_dict[me.gun_type]["bullet_frequency"]
-                    if loop_shoot_ready > frequancy:
-                        loop_shoot_ready = loop_shoot_ready - frequancy
-                    shoot_ready = False
-            if loop == loop_gen_bullet1:
-                bullet_list = me.gen_bullet()    # 这里不够完美，但是忽略
-                for each in bullet_list:
-                    myplane_bullet_group.add(Myplane_bullet\
-                                (me.gun_type,me.gun_type_dict,each,screen_size,ratio))
-                loop_gen_bullet1 = False
-            elif loop == loop_gen_bullet2:
-                bullet_list = me.gen_bullet()    # 这里不够完美，但是忽略
-                for each in bullet_list:
-                    myplane_bullet_group.add(Myplane_bullet\
-                                (me.gun_type,me.gun_type_dict,each,screen_size,ratio))
-                loop_gen_bullet2 = False
-
-
-            for each in myplane_bullet_group:    # 优化时可以跟其他循环合并
-                each.move()
-                if each.edge_collide():
-                    myplane_bullet_group.remove(each)
-                    #continue
-
-
-            # 尾气部分
-            weiqi_num = frequancy - 50
-            weiqi_obj = Weiqi(ratio,me.real_center_x,me.real_center_y,me.degree)
-            weiqi_group.add(weiqi_obj)
-            if len(weiqi_group) == weiqi_num + 1:
-                for each in weiqi_group:
-                    weiqi_group.remove(each)
-                    break
-
-
-            # enemy_1
-            ## 生成
-            #if loop == frequancy and len(enemy_1_group) < enemy_1_num:
-            if frequancy%loop and len(enemy_1_group) < enemy_1_num:
-                position = get_enemy_born_position()
-                enemy_1_group.add(Enemy_1(position[0],position[1],screen_size,ratio))
-
-
-            # 改变状态后的事件判断##################################################
-
-
-            ## enemy_1与me碰撞
-            enemy_1_me_collide = pygame.sprite.spritecollide(me,\
-                                enemy_1_group,False,pygame.sprite.collide_mask)
-            if enemy_1_me_collide:
-                if me.get_hurt(1):
-                    me_down_sound.play()
-                for each in enemy_1_me_collide:
-                    each.get_hurt(1)
-
-
-            ## 与myplane_bullet碰撞
-            enemy_1_myplane_bullet_collide = pygame.sprite.groupcollide(enemy_1_group,\
-                                myplane_bullet_group,False,True,pygame.sprite.collide_mask)
-            for each_enemy_1 in enemy_1_myplane_bullet_collide:    # 字典，value是列表；each是key【enemy_1】
-                for each_bullet in enemy_1_myplane_bullet_collide[each_enemy_1]:    # 抓取列表中每一个子弹
-                    each_enemy_1.get_hurt(each_bullet.power)
-
-
-            ## enemy1边界碰撞与死亡演示
-            for each in enemy_1_group:
-                if each.edge_collide():
-                    enemy_1_group.remove(each)
-                    continue
-                temp = each.check_die()
-                if temp == 2:
-                    enemy1_down_sound.play()
-                    score += 100
-                elif temp:
-                    enemy_1_group.remove(each)
-                    continue
-                each.move()
-                screen.blit(each.image,each.rect)
-
-
-            # bonus    # 0子弹数量，1子弹类型，2僚机，3大招，4血，5蓝
-            if loop == frequancy and len(bonus_group) <= 1:
-                temp = get_bonus_born_position()
-                if int(choice("01")):
-                    bonus_group.add(Bonus(ratio,temp[0],temp[1],screen_size,int(choice("45"))))
-                    #bonus_group.add(Bonus(ratio,temp[0],temp[1],screen_size,int(choice("2345"))))
-                else:
-                    bonus_group.add(Bonus(ratio,temp[0],temp[1],screen_size,int(choice("01")),int(choice("012"))))
-
-            for each in bonus_group:
-                each.move()
-                if not each.active:
-                    bonus_group.remove(each)
-                if not each.flashing:
-                    screen.blit(each.image,each.rect)
-                elif loop%20 in range(10):
-                    screen.blit(each.image,each.rect)
-                #pygame.draw.circle(screen,(0,0,0),each.aim,100,0)    # 测试用
-
-            bonus_myplane_collide = pygame.sprite.spritecollide(me,\
-                                bonus_group,True,pygame.sprite.collide_mask)
-            if bonus_myplane_collide:
-                for each in bonus_myplane_collide:    # 此处是碰撞的bonus集合
-                    me.get_bonus(each.type,each.num)
-                    if each.type == 0:
-                        get_bullet_sound.play()
-                    elif each.type == 1:
-                        get_bullet_sound.play()
-                    elif each.type == 2:#
-                        get_upgrade_sound.play()
-                    elif each.type == 3:#
-                        get_bomb_sound.play()
-                    elif each.type == 4 or 5:#
-                        get_supply_sound.play()
-
-
-            # 画子弹
-            for each in myplane_bullet_group:
-                screen.blit(each.image,each.rect)
-
-
-            # 画血槽可以考虑用递归？画格子的。好像也没必要
-            if me.active and me.hp > 0:
-                # 绘制矩形(绘制在哪，什么颜色，矩形的范围left top width height，矩形边框的大小)
-                if me.hp/me.hp_max > 0.3:
-                    pygame.draw.rect(screen,(100,255,100),\
-                                        (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio),\
-                                        100*(me.hp/me.hp_max)*ratio, int(10*ratio)),0)
-                elif loop%20 in range(10):
-                    pygame.draw.rect(screen,(255,60,60),\
-                                        (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio),\
-                                        100*(me.hp/me.hp_max)*ratio, int(10*ratio)),0)
-                pygame.draw.rect(screen,(0,0,0),\
-                                    (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio),\
-                                    100*ratio,int(10*ratio)),1)
-                # (文本，拒绝锯齿，颜色)，没有居中设置，要讨巧设置
-                me_hp_text = font_fs(int(10*ratio)).render("%d/%d" % (int(me.hp),me.hp_max),True,(0,0,0))
-                me_hp_text_rect = me_hp_text.get_rect()
-                screen.blit(me_hp_text,\
-                            (me.rect.center[0]-me_hp_text_rect[2]/2,me.rect.center[1]-int(100*ratio)))
-
-                # 蓝槽
-                pygame.draw.rect(screen,(70,200,255),\
-                                    (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio)+int(10*ratio),\
-                                    100*(me.sp/me.sp_max)*ratio,int(10*ratio)),0)
-                pygame.draw.rect(screen,(0,0,0),\
-                                    (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio)+int(10*ratio),\
-                                    100*ratio,int(10*ratio)),1)
-                # (文本，拒绝锯齿，颜色)，没有居中设置，要讨巧设置
-                me_sp_text = font_fs(int(10*ratio)).render("%d/%d" % (int(me.sp),me.sp_max),True,(0,0,0))
-                me_sp_text_rect = me_sp_text.get_rect()
-                screen.blit(me_sp_text,\
-                            (me.rect.center[0]-me_sp_text_rect[2]/2,me.rect.center[1]-int(100*ratio)+int(10*ratio)))
-
-
-            if me.hurting == True:
-                if loop%6 in range(3):
-                    screen.blit(me.image,me.rect)
-                    if len(weiqi_group) == weiqi_num:
-                        alpha_num = 0
-                        for each in weiqi_group:
-                            alpha_num += 255/weiqi_num
-                            set_image_alpha(each,screen,alpha_num)
-                    else:
-                        for each in weiqi_group:
-                            screen.blit(each.image,each.rect)
+            if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
+                            mouse_pos[1] in range(30,70) and switch_mouse_left:
+                pause_button = resume_pressed
             else:
+                pause_button = resume_nor 
+            screen.blit(pause_button,(screen_size[0]-65-20,30))    # 暂停按钮
+            # 可以保存起来重复调用
+            pause_text = font_msyh(int(72*ratio)).render("游戏暂停",True,(255,255,255))
+            pause_text_rect = pause_text.get_rect()
+            screen.blit(pause_text,(screen_size[0]*0.5-pause_text_rect[2]/2,screen_size[1]*0.2))
+
+            if gamepage_pause_setting_button.active and switch_mouse_left:
+                gamepage_pause_setting_button.color = gamepage_pause_setting_button.color2
+            else:
+                gamepage_pause_setting_button.color = gamepage_pause_setting_button.color1
+            gamepage_pause_setting_button.draw(screen)
+
+            if gamepage_pause_exit_button.active and switch_mouse_left:
+                gamepage_pause_exit_button.color = gamepage_pause_exit_button.color2
+            else:
+                gamepage_pause_exit_button.color = gamepage_pause_exit_button.color1
+            gamepage_pause_exit_button.draw(screen)
+
+
+    else:    # 游戏主循环界面
+        screen.fill((255,255,255))
+        # loop in Interval(1,60)
+        loop += 1
+        if loop == frequancy + 1:
+            loop = 1
+
+        
+        # 处理移动事件#####################################################
+
+        # me的部分
+        me.slowdown()
+
+        if switch_up:
+            me.move_up()
+        if switch_down:
+            me.move_down()
+        if switch_left:
+            me.move_left()
+        if switch_right:
+            me.move_right()
+
+        me_image_frequency = 5
+        if loop%me_image_frequency == 0 and loop/me_image_frequency%2 == 0:
+            me.chosen_image = me.transform_image2
+        elif loop%me_image_frequency == 0 and loop/me_image_frequency%2 == 1:
+            me.chosen_image = me.transform_image1
+
+        get_me_degree()
+        me.rotate()
+        me.move()
+
+
+        edge_collide_result = pygame.sprite.spritecollide(me,\
+                            edge_group,False,pygame.sprite.collide_mask)
+        if edge_collide_result:
+            for each in edge_collide_result:    # 此处是碰撞的边界的集合
+                me.edge_collide(each.direction)
+
+        if me.hurting == True:
+            if me.hurting_timer < me.hurting_frame:
+                me.hurting_timer += 1
+            elif me.hurting_timer >= me.hurting_frame:
+                me.hurting = False
+                me.hurting_timer = 0
+
+        if loop == frequancy:
+            me.get_sp()
+
+
+        # 生成me的bullet,声音不跟手，先播声音，后生成子弹
+        if loop == loop_shoot_ready:
+            shoot_ready = True
+            loop_shoot_ready = False
+        if switch_shoot and me.active and shoot_ready:
+            if me.shoot():    # 耗蓝方法
+                bullet_sound.play()
+                # 1个loop_gen_bullet只能延迟1个bullet_frequency，所以此处用了两个
+                if not loop_gen_bullet1 and not loop_gen_bullet2:
+                    loop_gen_bullet1 = loop + bullet_sound_delay    # 用这个参数处理延迟手感
+                    if loop_gen_bullet1 > frequancy:
+                        loop_gen_bullet1 = loop_gen_bullet1 - frequancy
+                elif loop_gen_bullet1 and not loop_gen_bullet2:
+                    loop_gen_bullet2 = loop + bullet_sound_delay
+                    if loop_gen_bullet2 > frequancy:
+                        loop_gen_bullet2 = loop_gen_bullet2 - frequancy
+                elif not loop_gen_bullet1 and loop_gen_bullet2:
+                    loop_gen_bullet1 = loop + bullet_sound_delay
+                    if loop_gen_bullet1 > frequancy:
+                        loop_gen_bullet1 = loop_gen_bullet1 - frequancy
+
+                loop_shoot_ready = loop + me.gun_type_dict[me.gun_type]["bullet_frequency"]
+                if loop_shoot_ready > frequancy:
+                    loop_shoot_ready = loop_shoot_ready - frequancy
+                shoot_ready = False
+        if loop == loop_gen_bullet1:
+            bullet_list = me.gen_bullet()    # 这里不够完美，但是忽略
+            for each in bullet_list:
+                myplane_bullet_group.add(Myplane_bullet\
+                            (me.gun_type,me.gun_type_dict,each,screen_size,ratio))
+            loop_gen_bullet1 = False
+        elif loop == loop_gen_bullet2:
+            bullet_list = me.gen_bullet()    # 这里不够完美，但是忽略
+            for each in bullet_list:
+                myplane_bullet_group.add(Myplane_bullet\
+                            (me.gun_type,me.gun_type_dict,each,screen_size,ratio))
+            loop_gen_bullet2 = False
+
+
+        for each in myplane_bullet_group:    # 优化时可以跟其他循环合并
+            each.move()
+            if each.edge_collide():
+                myplane_bullet_group.remove(each)
+                #continue
+
+
+        # 尾气部分
+        weiqi_num = frequancy - 50
+        weiqi_obj = Weiqi(ratio,me.real_center_x,me.real_center_y,me.degree)
+        weiqi_group.add(weiqi_obj)
+        if len(weiqi_group) == weiqi_num + 1:
+            for each in weiqi_group:
+                weiqi_group.remove(each)
+                break
+
+
+        # enemy_1
+        ## 生成
+        #if loop == frequancy and len(enemy_1_group) < enemy_1_num:
+        if frequancy%loop and len(enemy_1_group) < enemy_1_num:
+            position = get_enemy_born_position()
+            enemy_1_group.add(Enemy_1(position[0],position[1],screen_size,ratio))
+
+
+        # 改变状态后的事件判断##################################################
+
+
+        ## enemy_1与me碰撞
+        enemy_1_me_collide = pygame.sprite.spritecollide(me,\
+                            enemy_1_group,False,pygame.sprite.collide_mask)
+        if enemy_1_me_collide:
+            if me.get_hurt(1):
+                me_down_sound.play()
+            for each in enemy_1_me_collide:
+                each.get_hurt(1)
+
+
+        ## 与myplane_bullet碰撞
+        enemy_1_myplane_bullet_collide = pygame.sprite.groupcollide(enemy_1_group,\
+                            myplane_bullet_group,False,True,pygame.sprite.collide_mask)
+        for each_enemy_1 in enemy_1_myplane_bullet_collide:    # 字典，value是列表；each是key【enemy_1】
+            for each_bullet in enemy_1_myplane_bullet_collide[each_enemy_1]:    # 抓取列表中每一个子弹
+                each_enemy_1.get_hurt(each_bullet.power)
+
+
+        ## enemy1边界碰撞与死亡演示
+        for each in enemy_1_group:
+            if each.edge_collide():
+                enemy_1_group.remove(each)
+                continue
+            temp = each.check_die()
+            if temp == 2:
+                enemy1_down_sound.play()
+                score += 100
+            elif temp:
+                enemy_1_group.remove(each)
+                continue
+            each.move()
+            screen.blit(each.image,each.rect)
+
+
+        # bonus    # 0子弹数量，1子弹类型，2僚机，3大招，4血，5蓝
+        if loop == frequancy and len(bonus_group) <= 1:
+            temp = get_bonus_born_position()
+            if int(choice("01")):
+                bonus_group.add(Bonus(ratio,temp[0],temp[1],screen_size,int(choice("45"))))
+                #bonus_group.add(Bonus(ratio,temp[0],temp[1],screen_size,int(choice("2345"))))
+            else:
+                bonus_group.add(Bonus(ratio,temp[0],temp[1],screen_size,int(choice("01")),int(choice("012"))))
+
+        for each in bonus_group:
+            each.move()
+            if not each.active:
+                bonus_group.remove(each)
+            if not each.flashing:
+                screen.blit(each.image,each.rect)
+            elif loop%20 in range(10):
+                screen.blit(each.image,each.rect)
+            #pygame.draw.circle(screen,(0,0,0),each.aim,100,0)    # 测试用
+
+        bonus_myplane_collide = pygame.sprite.spritecollide(me,\
+                            bonus_group,True,pygame.sprite.collide_mask)
+        if bonus_myplane_collide:
+            for each in bonus_myplane_collide:    # 此处是碰撞的bonus集合
+                me.get_bonus(each.type,each.num)
+                if each.type == 0:
+                    get_bullet_sound.play()
+                elif each.type == 1:
+                    get_bullet_sound.play()
+                elif each.type == 2:#
+                    get_upgrade_sound.play()
+                elif each.type == 3:#
+                    get_bomb_sound.play()
+                elif each.type == 4 or 5:#
+                    get_supply_sound.play()
+
+
+        # 画子弹
+        for each in myplane_bullet_group:
+            screen.blit(each.image,each.rect)
+
+
+        # 画血槽可以考虑用递归？画格子的。好像也没必要
+        if me.active and me.hp > 0:
+            # 绘制矩形(绘制在哪，什么颜色，矩形的范围left top width height，矩形边框的大小)
+            if me.hp/me.hp_max > 0.3:
+                pygame.draw.rect(screen,(100,255,100),\
+                                    (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio),\
+                                    100*(me.hp/me.hp_max)*ratio, int(10*ratio)),0)
+            elif loop%20 in range(10):
+                pygame.draw.rect(screen,(255,60,60),\
+                                    (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio),\
+                                    100*(me.hp/me.hp_max)*ratio, int(10*ratio)),0)
+            pygame.draw.rect(screen,(0,0,0),\
+                                (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio),\
+                                100*ratio,int(10*ratio)),1)
+            # (文本，拒绝锯齿，颜色)，没有居中设置，要讨巧设置
+            me_hp_text = font_fs(int(10*ratio)).render("%d/%d" % (int(me.hp),me.hp_max),True,(0,0,0))
+            me_hp_text_rect = me_hp_text.get_rect()
+            screen.blit(me_hp_text,\
+                        (me.rect.center[0]-me_hp_text_rect[2]/2,me.rect.center[1]-int(100*ratio)))
+
+            # 蓝槽
+            pygame.draw.rect(screen,(70,200,255),\
+                                (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio)+int(10*ratio),\
+                                100*(me.sp/me.sp_max)*ratio,int(10*ratio)),0)
+            pygame.draw.rect(screen,(0,0,0),\
+                                (me.rect.center[0]-50*ratio, me.rect.center[1]-int(100*ratio)+int(10*ratio),\
+                                100*ratio,int(10*ratio)),1)
+            # (文本，拒绝锯齿，颜色)，没有居中设置，要讨巧设置
+            me_sp_text = font_fs(int(10*ratio)).render("%d/%d" % (int(me.sp),me.sp_max),True,(0,0,0))
+            me_sp_text_rect = me_sp_text.get_rect()
+            screen.blit(me_sp_text,\
+                        (me.rect.center[0]-me_sp_text_rect[2]/2,me.rect.center[1]-int(100*ratio)+int(10*ratio)))
+
+
+        if me.hurting == True:
+            if loop%6 in range(3):
+                screen.blit(me.image,me.rect)
                 if len(weiqi_group) == weiqi_num:
                     alpha_num = 0
                     for each in weiqi_group:
@@ -1211,31 +1166,79 @@ while True:    # 游戏界面
                 else:
                     for each in weiqi_group:
                         screen.blit(each.image,each.rect)
-                screen.blit(me.image,me.rect)
-
-
-            # UI
-            ##暂停按钮
-            if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
-                        mouse_pos[1] in range(30,70) and switch_mouse_left:
-                pause_button = pause_pressed
+        else:
+            if len(weiqi_group) == weiqi_num:
+                alpha_num = 0
+                for each in weiqi_group:
+                    alpha_num += 255/weiqi_num
+                    set_image_alpha(each,screen,alpha_num)
             else:
-                pause_button = pause_nor
-            screen.blit(pause_button,(screen_size[0]-65-20,30))
+                for each in weiqi_group:
+                    screen.blit(each.image,each.rect)
+            screen.blit(me.image,me.rect)
 
-            """fps_text = font_msyh(int(12*ratio)).render("fps: " + str(int(clock.get_fps())),True,(0,0,0))
-            #fps_text_rect = fps_text.get_rect()
-            screen.blit(fps_text,(int(10*ratio),int(10*ratio)))"""
 
-            """temp = str(score)
-            while temp:
-                temp.pop(0:2)"""
+        # UI
+        ##暂停按钮
+        if mouse_pos[0] in range(screen_size[0]-65-20,screen_size[0]-20) and\
+                    mouse_pos[1] in range(30,70) and switch_mouse_left:
+            pause_button = pause_pressed
+        else:
+            pause_button = pause_nor
+        screen.blit(pause_button,(screen_size[0]-65-20,30))
 
-            fps_text = font_msyh(int(24*ratio)).render(("击杀得分: %s" % score),True,(0,0,0))
-            #fps_text_rect = fps_text.get_rect()
-            screen.blit(fps_text,(int(20*ratio),int(20*ratio)))
+
+        # FPS
+        """fps_text = font_msyh(int(12*ratio)).render("fps: " + str(int(clock.get_fps())),True,(0,0,0))
+        #fps_text_rect = fps_text.get_rect()
+        screen.blit(fps_text,(int(10*ratio),int(10*ratio)))"""
+
+        """temp = str(score)
+        while temp:
+            temp.pop(0:2)"""
+
+
+        # 展示分数
+        raw_score = str(score)
+        score_result = ""
+        while len(raw_score)>3:
+            score_a = raw_score[-3:]
+            raw_score = raw_score[:-3]
+            score_result = "," + score_a + score_result
+        else:
+            score_result = raw_score + score_result
+        fps_text = font_msyh(int(24*ratio)).render(("击杀得分: %s" % score_result),True,(0,0,0))
+        #fps_text_rect = fps_text.get_rect()
+        screen.blit(fps_text,(int(20*ratio),int(20*ratio)))
+
+
+        # 展示存活时间
+        """timer_temp1 = 0
+        timer_text = font_msyh(int(24*ratio)).render(("存活时间: %.2f" % timer),True,(0,0,0))
+        screen.blit(timer_text,(int(20*ratio),int(50*ratio)))
+        timer = timer + timeit.Timer("timer_temp1 = 0").timeit()"""
+
+
+while True:    
+    # 画布区
+    #screen.blit(bg,(0,0))
+    screen2.fill((255,255,255,0))#alpha=0,全透明
+
+    pygame_event()
     
+    if initial:
+        initialize()
+        initial = False
     
+    if not pygame.mixer.music.get_busy():
+        pygame.mixer.music.play()
+
+    if homepage:    #游戏主界面
+        homepage_event()
+    elif diepage:
+        diepage_event()
+    elif gamepage:
+        gamepage_event()
     
     # 把screen2上面的透明图层画到screen上        
     screen.blit(screen2,(0,0))
@@ -1243,3 +1246,9 @@ while True:    # 游戏界面
     pygame.display.flip()
     clock.tick(frequancy)
     # 然后while True循环继续
+
+
+
+
+
+    
