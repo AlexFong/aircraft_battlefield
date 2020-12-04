@@ -28,9 +28,10 @@ class Enemy_1(pygame.sprite.Sprite):    # 继承
         self.aim = (randint(int(screen_size[0]*4/10),int(screen_size[0]*6/10)),\
                     randint(int(screen_size[1]*4/10),int(screen_size[1]*6/10)))
         self.frame = randint(120,300)    # 移动至目标点需要的帧数
-        self.raw_speed_x = int((self.aim[0] - x)/self.frame)
-        self.raw_speed_y = int((self.aim[1] - y)/self.frame)
+        self.raw_speed_x = (self.aim[0] - x)/self.frame
+        self.raw_speed_y = (self.aim[1] - y)/self.frame
         self.speed_x = self.raw_speed_x * self.ratio
+        print("speed_x",self.raw_speed_x,"*",self.ratio )
         self.speed_y = self.raw_speed_y * self.ratio
         
         # 旋转

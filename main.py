@@ -1,3 +1,4 @@
+from myplane import Myplane
 import pygame
 import sys
 import os
@@ -5,7 +6,7 @@ os.chdir(sys.argv[0][0:sys.argv[0].rfind("/")])    # 把目录设置为当前文
 import traceback
 import math
 from pygame.locals import *
-from interval import Interval
+from intervals import Interval
 from random import *
 import timeit
 
@@ -21,9 +22,14 @@ pygame.mixer.init()
 clock = pygame.time.Clock()
 
 # 参数定义6666666666666666666666666
-screen_size_default = width,height = 1600,900#1600,900
+screen_size_default = width,height = 1280,800
+# 1280,800    /    1600,900
 fullscreen_size = width,height = 1920,1080
+# 2560,1600   /    1920,1080
+
+# 不同端要设置不同的启动分辨率
 screen_size = screen_size_default
+
 # 缩放比,原来的坐标是逻辑坐标，缩放后的坐标是渲染的坐标
 ratio = screen_size[1]/screen_size_default[1]
 
@@ -35,6 +41,9 @@ screen2 = screen.convert_alpha()    # screen2是透明度图层
 
 # 分辨率设置
 screen_size_list = pygame.display.list_modes()
+print(screen_size_list)
+screen_size = screen_size_list[5]
+
 screen_size_setting = Setting_drawer(ratio,value=screen_size,list=screen_size_list,\
                     text="分辨率",text_size=24,text_color=(255,255,255),\
                     center=(screen_size_default[0]/2,screen_size[1]*0.39),\
@@ -211,7 +220,7 @@ def initialize():
 
     # 创建类对象5555555555555555
     me = Myplane(ratio,screen_size)
-
+    # print(me,Myplane)
     ## 创建精灵组
     weiqi_group = pygame.sprite.Group()
 
@@ -288,8 +297,8 @@ def get_me_degree():
 def get_enemy_born_position(area=None):
     if area == None:    
         position = (randint(-200,screen_size[0]+200),randint(-200,screen_size[1]+200))
-        while position[0] in Interval(-50,screen_size[0]+50) or \
-                position[1] in Interval(-50,screen_size[1]+50):
+        while position[0] in (-50, screen_size[0]+50) or \
+                position[1] in (-50, screen_size[1]+50):
             position = (randint(-200,screen_size[0]+200),randint(-200,screen_size[1]+200))
     # 完善功能
     return position
@@ -297,8 +306,8 @@ def get_enemy_born_position(area=None):
 
 def get_bonus_born_position(): 
     position = (randint(0,screen_size[0]),randint(0,screen_size[1]))
-    while position[0] in Interval(screen_size[0]*0.3,screen_size[0]*0.7) or \
-            position[1] in Interval(screen_size[1]*0.3,screen_size[1]*0.7):
+    while position[0] in (screen_size[0]*0.3,screen_size[0]*0.7) or \
+            position[1] in (screen_size[1]*0.3,screen_size[1]*0.7):
         position = (randint(0,screen_size[0]),randint(0,screen_size[1]))
     return position
 
